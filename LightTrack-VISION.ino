@@ -15,16 +15,16 @@
 #include <utility> // For std::swap
 
 // --- PIN CONFIGURATION ---
-const int RX1_PIN = 8;
-const int TX1_PIN = 9;
-const int LED_PIN = 7;
+const int RX1_PIN = 18;
+const int TX1_PIN = 17;
+const int LED_PIN = 2;
 
 // --- LED STRIP CONFIGURATION ---
-#define MAX_LED_DENSITY 60
-#define STRIP_LENGTH    10
-#define MAX_NUM_LEDS    (MAX_LED_DENSITY * STRIP_LENGTH)
-#define LED_TYPE        WS2812B
-#define COLOR_ORDER     GRB
+#define MAX_LED_DENSITY 20
+#define STRIP_LENGTH 4
+#define MAX_NUM_LEDS (MAX_LED_DENSITY * STRIP_LENGTH)
+#define LED_TYPE WS2812B
+#define COLOR_ORDER GRB
 CRGB leds[MAX_NUM_LEDS];
 
 // --- CURRENT STRIP VARIABLES ---
@@ -33,29 +33,30 @@ int currentNumLeds = (currentLedDensity * STRIP_LENGTH);
 
 // --- RADAR CONFIGURATION ---
 LD2450 ld2450;
+#define LD2450_SERIAL_SPEED 256000
 
 // --- TARGET TRACKING CONFIGURATION ---
 #define MAX_TARGETS 1
 #define TARGET_TIMEOUT 2000
-#define GHOST_FILTER_TIMEOUT 5000 
-#define GHOST_REMOVAL_TIMEOUT 10000 
-#define MERGE_DISTANCE 500 
+#define GHOST_FILTER_TIMEOUT 5000
+#define GHOST_REMOVAL_TIMEOUT 10000
+#define MERGE_DISTANCE 500
 
 // --- RADAR PROCESSING RANGE ---
-#define MIN_PROCESS_DISTANCE  150
-#define MAX_PROCESS_DISTANCE  8000
+#define MIN_PROCESS_DISTANCE 150
+#define MAX_PROCESS_DISTANCE 8000
 
 // --- CALIBRATION TABLES ---
 #define CALIBRATION_POINTS 16
 const int calibration30[CALIBRATION_POINTS][2] = {
-  {150,   5}, {250,   8}, {500,  15}, {750,  23}, {1000,  30}, {1500,  45},
-  {2000,  60}, {2500,  75}, {3000,  90}, {4000, 120}, {5000, 150}, {6000, 180},
-  {7000, 210}, {8000, 240}, {8500, 255}, {9000, 270}
+  { 150, 5 }, { 250, 8 }, { 500, 15 }, { 750, 23 }, { 1000, 30 }, { 1500, 45 }, { 2000, 60 }, { 2500, 75 }, { 3000, 90 }, { 4000, 120 }, { 5000, 150 }, { 6000, 180 }, { 7000, 210 }, { 8000, 240 }, { 8500, 255 }, { 9000, 270 }
 };
 const int calibration60[CALIBRATION_POINTS][2] = {
-  {150,   10}, {250,  16}, {500,  30}, {750,  46}, {1000,  60}, {1500,  90},
-  {2000, 120}, {2500, 150}, {3000, 180}, {4000, 240}, {5000, 300}, {6000, 360},
-  {7000, 420}, {8000, 480}, {8500, 540}, {9000, 599}
+  { 150, 10 }, { 250, 16 }, { 500, 30 }, { 750, 46 }, { 1000, 60 }, { 1500, 90 }, { 2000, 120 }, { 2500, 150 }, { 3000, 180 }, { 4000, 240 }, { 5000, 300 }, { 6000, 360 }, { 7000, 420 }, { 8000, 480 }, { 8500, 540 }, { 9000, 599 }
+};
+
+const int calibration20[CALIBRATION_POINTS][2] = {
+  { 150, 3 }, { 250, 5 }, { 500, 10 }, { 750, 15 }, { 1000, 20 }, { 1500, 30 }, { 2000, 40 }, { 2500, 50 }, { 3000, 60 }, { 4000, 80 }, { 5000, 100 }, { 6000, 120 }, { 7000, 140 }, { 8000, 160 }, { 8500, 180 }, { 9000, 200 }
 };
 
 // --- INACTIVE ZONES (NOW 12 ZONES) ---
@@ -66,7 +67,7 @@ struct Point {
 };
 struct InactiveZone {
   bool enabled;
-  Point corners[4]; // 4 corners: top-left, top-right, bottom-right, bottom-left
+  Point corners[4];  // 4 corners: top-left, top-right, bottom-right, bottom-left
 };
 InactiveZone inactiveZones[MAX_INACTIVE_ZONES];
 
@@ -91,12 +92,12 @@ int additionalLEDs = 75;
 bool backgroundModeActive = false;
 int maxActiveTargets = 1;
 TargetSetting targetSettings[MAX_TARGETS] = {
-  {true, CRGB(255, 200, 50)}
+  { true, CRGB(255, 200, 50) }
 };
 
 // --- EEPROM ---
-#define EEPROM_SIZE (1024 + sizeof(int) + (8 * sizeof(InactiveZone))) // Increased for 12 zones
-#define EEPROM_VERSION 0xAF // EEPROM Version changed due to zone count modification
+#define EEPROM_SIZE (1024 + sizeof(int) + (8 * sizeof(InactiveZone)))  // Increased for 12 zones
+#define EEPROM_VERSION 0xAF                                            // EEPROM Version changed due to zone count modification
 
 // --- TARGET STRUCTURE with Kalman Filter variables ---
 struct Target {
@@ -127,23 +128,44 @@ unsigned long wifiStartTime = 0;
 bool wifiActive = true;
 
 // --- FUNCTION PROTOTYPES ---
-void sensorTask(void* parameter); void ledTask(void* parameter); void webServerTask(void* parameter);
-void loadSettings(); void saveSettings(); bool initializeStrip(); int mapDistanceToLED(int rawDistance);
-bool isTargetInInactiveZone(int targetX, int targetY); void setupWiFi(); void setupOTA();
-void handleRoot(); void handleSetMovingIntensity(); void handleSetStationaryIntensity();
-void handleSetMovingLength(); void handleSetAdditionalLEDs(); void handleSetCenterShift();
-void handleSetLedDensity(); void handleSetGradientSoftness(); void handleSetLedOffDelay();
-void handleSetTime(); void handleSetSchedule(); void handleNotFound(); void handleSmartHomeOn();
-void handleSmartHomeOff(); void handleSmartHomeClear(); void handleToggleBackgroundMode();
-void handleGetCurrentTime(); void handleRadarView(); void webSocketEvent(uint8_t, WStype_t, uint8_t*, size_t);
-void broadcastRadarData(); void updateTime();
+void sensorTask(void* parameter);
+void ledTask(void* parameter);
+void webServerTask(void* parameter);
+void loadSettings();
+void saveSettings();
+bool initializeStrip();
+int mapDistanceToLED(int rawDistance);
+bool isTargetInInactiveZone(int targetX, int targetY);
+void setupWiFi();
+void setupOTA();
+void handleRoot();
+void handleSetMovingIntensity();
+void handleSetStationaryIntensity();
+void handleSetMovingLength();
+void handleSetAdditionalLEDs();
+void handleSetCenterShift();
+void handleSetLedDensity();
+void handleSetGradientSoftness();
+void handleSetLedOffDelay();
+void handleSetTime();
+void handleSetSchedule();
+void handleNotFound();
+void handleSmartHomeOn();
+void handleSmartHomeOff();
+void handleSmartHomeClear();
+void handleToggleBackgroundMode();
+void handleGetCurrentTime();
+void handleRadarView();
+void webSocketEvent(uint8_t, WStype_t, uint8_t*, size_t);
+void broadcastRadarData();
+void updateTime();
 void handleSetTargetSettings();
 void checkWiFiTimeout();
 
 // ------------------------- Setup -------------------------
 void setup() {
   setCpuFrequencyMhz(80);
-  
+
   Serial.begin(115200);
   delay(1000);
   Serial.println("\n\n--- setup() begins ---");
@@ -154,7 +176,7 @@ void setup() {
   randomSeed(ESP.getEfuseMac());
 
   Serial.println("Initializing Target variables...");
-  for (auto & target : targets) {
+  for (auto& target : targets) {
     target.present = false;
     target.isInitialized = false;
     target.smoothedLEDPosition = 0;
@@ -165,10 +187,10 @@ void setup() {
   }
 
   Serial.println("Setting all INACTIVE zones to DISABLED by default...");
-  for (auto & zone : inactiveZones) {
+  for (auto& zone : inactiveZones) {
     zone.enabled = false;
   }
-  
+
   if (!SPIFFS.begin(true)) { Serial.println("!!! SPIFFS mount failed"); }
 
   Serial.println("--- Calling loadSettings() ---");
@@ -176,7 +198,9 @@ void setup() {
 
   Serial.println("Initializing LD2450 Radar...");
   Serial1.begin(LD2450_SERIAL_SPEED, SERIAL_8N1, RX1_PIN, TX1_PIN);
-  delay(500); ld2450.begin(Serial1); delay(100);
+  delay(500);
+  ld2450.begin(Serial1);
+  delay(100);
   Serial.println("Radar initialized.");
 
   setupWiFi();
@@ -192,8 +216,11 @@ void setup() {
 
   Serial.println("--------------------------------------");
   Serial.println("Setup complete. System is running.");
-  Serial.print("Web UI: http://"); Serial.println(WiFi.softAPIP());
-  Serial.print("Radar View: http://"); Serial.print(WiFi.softAPIP()); Serial.println("/radarview");
+  Serial.print("Web UI: http://");
+  Serial.println(WiFi.softAPIP());
+  Serial.print("Radar View: http://");
+  Serial.print(WiFi.softAPIP());
+  Serial.println("/radarview");
   Serial.printf("Wi-Fi will turn off automatically in %d minutes.\n", wifiTimeoutMinutes);
   Serial.println("--------------------------------------");
 }
@@ -206,35 +233,35 @@ void loop() {
 
 // --- CORE LOGIC FUNCTIONS ---
 int mapDistanceToLED(int rawDistance) {
-  const int (*selectedCalibration)[2] = (currentLedDensity == 60) ? calibration60 : calibration30;
+  const int(*selectedCalibration)[2] = (currentLedDensity == 60) ? calibration60 : calibration30;
   rawDistance = constrain(rawDistance, MIN_PROCESS_DISTANCE, MAX_PROCESS_DISTANCE);
   for (int i = 0; i < CALIBRATION_POINTS - 1; i++) {
-    if (rawDistance >= selectedCalibration[i][0] && rawDistance <= selectedCalibration[i+1][0]) {
-      if (selectedCalibration[i+1][0] == selectedCalibration[i][0]) return selectedCalibration[i][1];
-      float proportion = (float)(rawDistance - selectedCalibration[i][0]) / (float)(selectedCalibration[i+1][0] - selectedCalibration[i][0]);
-      return constrain(selectedCalibration[i][1] + round(proportion * (selectedCalibration[i+1][1] - selectedCalibration[i][1])), 0, currentNumLeds - 1);
+    if (rawDistance >= selectedCalibration[i][0] && rawDistance <= selectedCalibration[i + 1][0]) {
+      if (selectedCalibration[i + 1][0] == selectedCalibration[i][0]) return selectedCalibration[i][1];
+      float proportion = (float)(rawDistance - selectedCalibration[i][0]) / (float)(selectedCalibration[i + 1][0] - selectedCalibration[i][0]);
+      return constrain(selectedCalibration[i][1] + round(proportion * (selectedCalibration[i + 1][1] - selectedCalibration[i][1])), 0, currentNumLeds - 1);
     }
   }
-  if (rawDistance >= selectedCalibration[CALIBRATION_POINTS-1][0]) return constrain(selectedCalibration[CALIBRATION_POINTS-1][1], 0, currentNumLeds - 1);
+  if (rawDistance >= selectedCalibration[CALIBRATION_POINTS - 1][0]) return constrain(selectedCalibration[CALIBRATION_POINTS - 1][1], 0, currentNumLeds - 1);
   return constrain(selectedCalibration[0][1], 0, currentNumLeds - 1);
 }
 
 bool isTargetInInactiveZone(int targetX, int targetY) {
-    for (int i = 0; i < MAX_INACTIVE_ZONES; ++i) {
-        if (!inactiveZones[i].enabled) continue;
-        const Point* corners = inactiveZones[i].corners;
-        bool has_neg = false;
-        bool has_pos = false;
-        for (int j = 0; j < 4; ++j) {
-            const Point& p1 = corners[j];
-            const Point& p2 = corners[(j + 1) % 4];
-            int cross_product = (p2.x - p1.x) * (targetY - p1.y) - (p2.y - p1.y) * (targetX - p1.x);
-            if (cross_product < 0) has_neg = true;
-            if (cross_product > 0) has_pos = true;
-        }
-        if (!(has_neg && has_pos)) return true;
+  for (int i = 0; i < MAX_INACTIVE_ZONES; ++i) {
+    if (!inactiveZones[i].enabled) continue;
+    const Point* corners = inactiveZones[i].corners;
+    bool has_neg = false;
+    bool has_pos = false;
+    for (int j = 0; j < 4; ++j) {
+      const Point& p1 = corners[j];
+      const Point& p2 = corners[(j + 1) % 4];
+      int cross_product = (p2.x - p1.x) * (targetY - p1.y) - (p2.y - p1.y) * (targetX - p1.x);
+      if (cross_product < 0) has_neg = true;
+      if (cross_product > 0) has_pos = true;
     }
-    return false;
+    if (!(has_neg && has_pos)) return true;
+  }
+  return false;
 }
 
 void loadSettings() {
@@ -243,36 +270,53 @@ void loadSettings() {
   int addr = 0;
   byte checkVal;
   EEPROM.get(addr, checkVal);
-  addr += sizeof(checkVal); 
-  if (checkVal != EEPROM_VERSION) { 
-      Serial.printf("!!! EEPROM version mismatch (is %X, expected %X). Resetting to defaults.\n", checkVal, EEPROM_VERSION);
-      EEPROM.end();
-      saveSettings();
-      return;
+  addr += sizeof(checkVal);
+  if (checkVal != EEPROM_VERSION) {
+    Serial.printf("!!! EEPROM version mismatch (is %X, expected %X). Resetting to defaults.\n", checkVal, EEPROM_VERSION);
+    EEPROM.end();
+    saveSettings();
+    return;
   }
-  
-  EEPROM.get(addr, ledOffDelay); addr += sizeof(ledOffDelay);
-  EEPROM.get(addr, movingIntensity); addr += sizeof(movingIntensity);
-  EEPROM.get(addr, stationaryIntensity); addr += sizeof(stationaryIntensity);
-  EEPROM.get(addr, movingLength); addr += sizeof(movingLength);
-  EEPROM.get(addr, centerShift); addr += sizeof(centerShift);
-  EEPROM.get(addr, additionalLEDs); addr += sizeof(additionalLEDs);
-  EEPROM.get(addr, targetSettings[0].color); addr += sizeof(targetSettings[0].color);
-  EEPROM.get(addr, gradientSoftness); addr += sizeof(gradientSoftness);
-  EEPROM.get(addr, startHour); addr += sizeof(startHour);
-  EEPROM.get(addr, startMinute); addr += sizeof(startMinute);
-  EEPROM.get(addr, endHour); addr += sizeof(endHour);
-  EEPROM.get(addr, endMinute); addr += sizeof(endMinute);
-  int tempTz; EEPROM.get(addr, tempTz); clientTimezoneOffsetMinutes = tempTz; addr += sizeof(clientTimezoneOffsetMinutes);
-  EEPROM.get(addr, backgroundModeActive); addr += sizeof(backgroundModeActive);
-  EEPROM.get(addr, currentLedDensity); addr += sizeof(currentLedDensity);
-  
+
+  EEPROM.get(addr, ledOffDelay);
+  addr += sizeof(ledOffDelay);
+  EEPROM.get(addr, movingIntensity);
+  addr += sizeof(movingIntensity);
+  EEPROM.get(addr, stationaryIntensity);
+  addr += sizeof(stationaryIntensity);
+  EEPROM.get(addr, movingLength);
+  addr += sizeof(movingLength);
+  EEPROM.get(addr, centerShift);
+  addr += sizeof(centerShift);
+  EEPROM.get(addr, additionalLEDs);
+  addr += sizeof(additionalLEDs);
+  EEPROM.get(addr, targetSettings[0].color);
+  addr += sizeof(targetSettings[0].color);
+  EEPROM.get(addr, gradientSoftness);
+  addr += sizeof(gradientSoftness);
+  EEPROM.get(addr, startHour);
+  addr += sizeof(startHour);
+  EEPROM.get(addr, startMinute);
+  addr += sizeof(startMinute);
+  EEPROM.get(addr, endHour);
+  addr += sizeof(endHour);
+  EEPROM.get(addr, endMinute);
+  addr += sizeof(endMinute);
+  int tempTz;
+  EEPROM.get(addr, tempTz);
+  clientTimezoneOffsetMinutes = tempTz;
+  addr += sizeof(clientTimezoneOffsetMinutes);
+  EEPROM.get(addr, backgroundModeActive);
+  addr += sizeof(backgroundModeActive);
+  EEPROM.get(addr, currentLedDensity);
+  addr += sizeof(currentLedDensity);
+
   currentNumLeds = constrain(currentLedDensity * STRIP_LENGTH, 1, MAX_NUM_LEDS);
 
   if (addr + sizeof(inactiveZones) <= EEPROM_SIZE) {
-      EEPROM.get(addr, inactiveZones);
-      addr += sizeof(inactiveZones);
-      Serial.println("Loaded Quadrilateral zones from EEPROM.");
+    EEPROM.get(addr, inactiveZones);
+    addr += sizeof(inactiveZones);
+    Serial.println("Loaded Quadrilateral zones from EEPROM.");
   }
   EEPROM.end();
 }
@@ -282,93 +326,111 @@ void saveSettings() {
   EEPROM.begin(EEPROM_SIZE);
   int addr = 0;
   byte checkVal = EEPROM_VERSION;
-  EEPROM.put(addr, checkVal); addr += sizeof(checkVal);
-  
-  EEPROM.put(addr, ledOffDelay); addr += sizeof(ledOffDelay);
-  EEPROM.put(addr, movingIntensity); addr += sizeof(movingIntensity);
-  EEPROM.put(addr, stationaryIntensity); addr += sizeof(stationaryIntensity);
-  EEPROM.put(addr, movingLength); addr += sizeof(movingLength);
-  EEPROM.put(addr, centerShift); addr += sizeof(centerShift);
-  EEPROM.put(addr, additionalLEDs); addr += sizeof(additionalLEDs);
-  EEPROM.put(addr, targetSettings[0].color); addr += sizeof(targetSettings[0].color);
-  EEPROM.put(addr, gradientSoftness); addr += sizeof(gradientSoftness);
-  EEPROM.put(addr, startHour); addr += sizeof(startHour);
-  EEPROM.put(addr, startMinute); addr += sizeof(startMinute);
-  EEPROM.put(addr, endHour); addr += sizeof(endHour);
-  EEPROM.put(addr, endMinute); addr += sizeof(endMinute);
-  int tempTz = clientTimezoneOffsetMinutes; EEPROM.put(addr, tempTz); addr += sizeof(clientTimezoneOffsetMinutes);
-  EEPROM.put(addr, backgroundModeActive); addr += sizeof(backgroundModeActive);
-  EEPROM.put(addr, currentLedDensity); addr += sizeof(currentLedDensity);
+  EEPROM.put(addr, checkVal);
+  addr += sizeof(checkVal);
+
+  EEPROM.put(addr, ledOffDelay);
+  addr += sizeof(ledOffDelay);
+  EEPROM.put(addr, movingIntensity);
+  addr += sizeof(movingIntensity);
+  EEPROM.put(addr, stationaryIntensity);
+  addr += sizeof(stationaryIntensity);
+  EEPROM.put(addr, movingLength);
+  addr += sizeof(movingLength);
+  EEPROM.put(addr, centerShift);
+  addr += sizeof(centerShift);
+  EEPROM.put(addr, additionalLEDs);
+  addr += sizeof(additionalLEDs);
+  EEPROM.put(addr, targetSettings[0].color);
+  addr += sizeof(targetSettings[0].color);
+  EEPROM.put(addr, gradientSoftness);
+  addr += sizeof(gradientSoftness);
+  EEPROM.put(addr, startHour);
+  addr += sizeof(startHour);
+  EEPROM.put(addr, startMinute);
+  addr += sizeof(startMinute);
+  EEPROM.put(addr, endHour);
+  addr += sizeof(endHour);
+  EEPROM.put(addr, endMinute);
+  addr += sizeof(endMinute);
+  int tempTz = clientTimezoneOffsetMinutes;
+  EEPROM.put(addr, tempTz);
+  addr += sizeof(clientTimezoneOffsetMinutes);
+  EEPROM.put(addr, backgroundModeActive);
+  addr += sizeof(backgroundModeActive);
+  EEPROM.put(addr, currentLedDensity);
+  addr += sizeof(currentLedDensity);
 
   if (addr + sizeof(inactiveZones) <= EEPROM_SIZE) {
-      EEPROM.put(addr, inactiveZones);
-      addr += sizeof(inactiveZones);
+    EEPROM.put(addr, inactiveZones);
+    addr += sizeof(inactiveZones);
   }
-  
+
   boolean result = EEPROM.commit();
   EEPROM.end();
-  Serial.print("EEPROM save finished. Result: "); Serial.println(result ? "OK" : "ERROR");
+  Serial.print("EEPROM save finished. Result: ");
+  Serial.println(result ? "OK" : "ERROR");
   Serial.printf("Total EEPROM bytes used: %d / %d\n", addr, EEPROM_SIZE);
 }
 
 bool initializeStrip() {
   Serial.println("Initializing LED Strip (FastLED)...");
   try {
-      FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, MAX_NUM_LEDS).setCorrection(TypicalLEDStrip);
-      FastLED.setBrightness(255);
-      FastLED.clear(true);
-      return true;
+    FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, MAX_NUM_LEDS).setCorrection(TypicalLEDStrip);
+    FastLED.setBrightness(255);
+    FastLED.clear(true);
+    return true;
   } catch (...) {
-      Serial.println("!!! CRITICAL ERROR in FastLED.addLeds()!");
-      return false;
+    Serial.println("!!! CRITICAL ERROR in FastLED.addLeds()!");
+    return false;
   }
 }
 
 // --- RTOS TASKS ---
-void sensorTask(void * parameter) {
+void sensorTask(void* parameter) {
   Serial.println("Sensor Task started.");
   for (;;) {
     if (ld2450.read() > 0) {
-        unsigned long currentMillis = millis();
-        bool targetFoundThisCycle = false;
-        int closestTargetIndex = -1;
-        int minDistance = 99999;
-        for (int i = 0; i < ld2450.getSensorSupportedTargetCount(); i++) {
-            LD2450::RadarTarget radarTarget = ld2450.getTarget(i);
-            if (radarTarget.valid && radarTarget.distance < minDistance) {
-                minDistance = radarTarget.distance;
-                closestTargetIndex = i;
-            }
+      unsigned long currentMillis = millis();
+      bool targetFoundThisCycle = false;
+      int closestTargetIndex = -1;
+      int minDistance = 99999;
+      for (int i = 0; i < ld2450.getSensorSupportedTargetCount(); i++) {
+        LD2450::RadarTarget radarTarget = ld2450.getTarget(i);
+        if (radarTarget.valid && radarTarget.distance < minDistance) {
+          minDistance = radarTarget.distance;
+          closestTargetIndex = i;
         }
-        if (closestTargetIndex != -1) {
-            LD2450::RadarTarget radarTarget = ld2450.getTarget(closestTargetIndex);
-            if (targets[0].present && (millis() - targets[0].lastMovementTime > GHOST_REMOVAL_TIMEOUT)) {
-                Serial.printf("Ghost target detected and ignored.\n");
-            } else {
-                targetFoundThisCycle = true;
-                if (!targets[0].present) { targets[0].lastMovementTime = currentMillis; }
-                targets[0].x = radarTarget.x;
-                targets[0].y = radarTarget.y;
-                targets[0].distance = radarTarget.distance;
-                targets[0].speed = radarTarget.speed;
-                targets[0].present = true;
-                targets[0].lastSeenTime = currentMillis;
-                if (abs(radarTarget.speed) >= movementSensitivity) {
-                    targets[0].lastMovementTime = currentMillis;
-                    if (radarTarget.speed > movementSensitivity) targets[0].lastMovementDirection = 1;
-                    else if (radarTarget.speed < -movementSensitivity) targets[0].lastMovementDirection = -1;
-                }
-            }
+      }
+      if (closestTargetIndex != -1) {
+        LD2450::RadarTarget radarTarget = ld2450.getTarget(closestTargetIndex);
+        if (targets[0].present && (millis() - targets[0].lastMovementTime > GHOST_REMOVAL_TIMEOUT)) {
+          Serial.printf("Ghost target detected and ignored.\n");
+        } else {
+          targetFoundThisCycle = true;
+          if (!targets[0].present) { targets[0].lastMovementTime = currentMillis; }
+          targets[0].x = radarTarget.x;
+          targets[0].y = radarTarget.y;
+          targets[0].distance = radarTarget.distance;
+          targets[0].speed = radarTarget.speed;
+          targets[0].present = true;
+          targets[0].lastSeenTime = currentMillis;
+          if (abs(radarTarget.speed) >= movementSensitivity) {
+            targets[0].lastMovementTime = currentMillis;
+            if (radarTarget.speed > movementSensitivity) targets[0].lastMovementDirection = 1;
+            else if (radarTarget.speed < -movementSensitivity) targets[0].lastMovementDirection = -1;
+          }
         }
-        if (!targetFoundThisCycle) {
-            targets[0].present = false;
-        }
+      }
+      if (!targetFoundThisCycle) {
+        targets[0].present = false;
+      }
     }
     vTaskDelay(pdMS_TO_TICKS(20));
   }
 }
 
-void ledTask(void * parameter) {
+void ledTask(void* parameter) {
   unsigned long lastCycleTimeMicros = micros();
   while (true) {
     unsigned long currentMicros = micros();
@@ -376,48 +438,51 @@ void ledTask(void * parameter) {
     lastCycleTimeMicros = currentMicros;
     if (deltaTime <= 0.0f || deltaTime > 0.1f) deltaTime = (float)ledUpdateInterval / 1000.0f;
     if (!lightOn && !smarthomeOverride) {
-        fill_solid(leds, MAX_NUM_LEDS, CRGB::Black);
-        FastLED.show();
-        vTaskDelay(pdMS_TO_TICKS(ledUpdateInterval * 2)); continue;
+      fill_solid(leds, MAX_NUM_LEDS, CRGB::Black);
+      FastLED.show();
+      vTaskDelay(pdMS_TO_TICKS(ledUpdateInterval * 2));
+      continue;
     }
     if (backgroundModeActive) {
-        CRGB bgColor = targetSettings[0].color;
-        bgColor.nscale8_video(stationaryIntensity * 255);
-        fill_solid(leds, currentNumLeds, bgColor);
+      CRGB bgColor = targetSettings[0].color;
+      bgColor.nscale8_video(stationaryIntensity * 255);
+      fill_solid(leds, currentNumLeds, bgColor);
     } else {
-        fill_solid(leds, currentNumLeds, CRGB::Black);
+      fill_solid(leds, currentNumLeds, CRGB::Black);
     }
     if (currentNumLeds < MAX_NUM_LEDS) {
-        fill_solid(leds + currentNumLeds, MAX_NUM_LEDS - currentNumLeds, CRGB::Black);
+      fill_solid(leds + currentNumLeds, MAX_NUM_LEDS - currentNumLeds, CRGB::Black);
     }
     Target& target = targets[0];
     const float q_pos = 1.0f * deltaTime, q_vel = 5.0f * deltaTime, r_measure = 10.0f;
     if (target.present) {
-        float measuredPosition = (float)mapDistanceToLED(target.distance);
-        if (!target.isInitialized) {
-            target.smoothedLEDPosition = measuredPosition;
-            target.velocityLED = 0;
-            target.p_pos = 1000.0f; target.p_vel = 1000.0f; 
-            target.isInitialized = true;
-        }
-        float predicted_pos = target.smoothedLEDPosition + target.velocityLED * deltaTime;
-        target.p_pos += q_pos; target.p_vel += q_vel;
-        float innovation = measuredPosition - predicted_pos;
-        float s_inv = 1.0f / (target.p_pos + r_measure);
-        float k_pos = target.p_pos * s_inv;
-        float k_vel = target.p_vel * s_inv;
-        target.smoothedLEDPosition = predicted_pos + k_pos * innovation;
-        target.velocityLED += k_vel * innovation;
-        target.p_pos *= (1.0f - k_pos);
-        target.p_vel *= (1.0f - k_pos);
-    } else if (target.isInitialized) { 
-        float decayRate = 15.0f; 
-        target.velocityLED *= (1.0f - constrain(decayRate * deltaTime, 0.0f, 1.0f));
-        target.p_pos = min(target.p_pos * 1.5f, 1000.0f);
-        target.p_vel = min(target.p_vel * 1.5f, 1000.0f);
-        if (millis() - target.lastSeenTime > ((unsigned long)ledOffDelay * 1000 + 500)) {
-            target.isInitialized = false;
-        }
+      float measuredPosition = (float)mapDistanceToLED(target.distance);
+      if (!target.isInitialized) {
+        target.smoothedLEDPosition = measuredPosition;
+        target.velocityLED = 0;
+        target.p_pos = 1000.0f;
+        target.p_vel = 1000.0f;
+        target.isInitialized = true;
+      }
+      float predicted_pos = target.smoothedLEDPosition + target.velocityLED * deltaTime;
+      target.p_pos += q_pos;
+      target.p_vel += q_vel;
+      float innovation = measuredPosition - predicted_pos;
+      float s_inv = 1.0f / (target.p_pos + r_measure);
+      float k_pos = target.p_pos * s_inv;
+      float k_vel = target.p_vel * s_inv;
+      target.smoothedLEDPosition = predicted_pos + k_pos * innovation;
+      target.velocityLED += k_vel * innovation;
+      target.p_pos *= (1.0f - k_pos);
+      target.p_vel *= (1.0f - k_pos);
+    } else if (target.isInitialized) {
+      float decayRate = 15.0f;
+      target.velocityLED *= (1.0f - constrain(decayRate * deltaTime, 0.0f, 1.0f));
+      target.p_pos = min(target.p_pos * 1.5f, 1000.0f);
+      target.p_vel = min(target.p_vel * 1.5f, 1000.0f);
+      if (millis() - target.lastSeenTime > ((unsigned long)ledOffDelay * 1000 + 500)) {
+        target.isInitialized = false;
+      }
     }
     float maxVel = 500.0f * ((float)currentNumLeds / MAX_NUM_LEDS);
     target.velocityLED = constrain(target.velocityLED, -maxVel, maxVel);
@@ -425,11 +490,11 @@ void ledTask(void * parameter) {
     float targetBrightness = 0.0f;
     bool shouldBeLit = (target.isInitialized && (target.present || (ledOffDelay > 0 && millis() - target.lastSeenTime < (unsigned long)ledOffDelay * 1000)));
     if (shouldBeLit && !isTargetInInactiveZone(target.x, target.y)) {
-        bool isMoving = target.present && (abs(target.speed) >= movementSensitivity);
-        if(isMoving) targetBrightness = movingIntensity;
-        else if (!backgroundModeActive) targetBrightness = movingIntensity;
-        else if (target.present && (millis() - target.lastMovementTime < GHOST_FILTER_TIMEOUT)) targetBrightness = stationaryIntensity;
-        else if (!target.present) targetBrightness = movingIntensity;
+      bool isMoving = target.present && (abs(target.speed) >= movementSensitivity);
+      if (isMoving) targetBrightness = movingIntensity;
+      else if (!backgroundModeActive) targetBrightness = movingIntensity;
+      else if (target.present && (millis() - target.lastMovementTime < GHOST_FILTER_TIMEOUT)) targetBrightness = stationaryIntensity;
+      else if (!target.present) targetBrightness = movingIntensity;
     }
     if (ledOffDelay == 0 && !target.present) target.currentBrightness = 0.0f;
     float fadeRate = (target.currentBrightness < targetBrightness) ? 8.0f : 4.0f;
@@ -441,43 +506,76 @@ void ledTask(void * parameter) {
       if (abs(target.velocityLED) > 2.0f) direction = (target.velocityLED > 0) ? 1 : -1;
       if (direction == 0) direction = 1;
       int leftEdge, rightEdge;
-      if (direction > 0) { leftEdge = centerLED - (movingLength / 2); rightEdge = leftEdge + movingLength - 1 + additionalLEDs; } 
-      else { rightEdge = centerLED + (movingLength / 2); leftEdge = rightEdge - (movingLength - 1) - additionalLEDs; }
+      if (direction > 0) {
+        leftEdge = centerLED - (movingLength / 2);
+        rightEdge = leftEdge + movingLength - 1 + additionalLEDs;
+      } else {
+        rightEdge = centerLED + (movingLength / 2);
+        leftEdge = rightEdge - (movingLength - 1) - additionalLEDs;
+      }
       int totalLightLength = rightEdge - leftEdge + 1;
       if (totalLightLength <= 0) totalLightLength = 1;
       int fadeWidth = map(gradientSoftness, 0, 10, 0, max(1, totalLightLength / 3));
       float fadeExp = 1.0 + (gradientSoftness / 10.0) * 1.5;
       for (int i = max(0, leftEdge); i <= min(currentNumLeds - 1, rightEdge); ++i) {
-          int pos = (direction > 0) ? (i - leftEdge) : (rightEdge - i);
-          float intensity = 1.0f;
-          if (gradientSoftness > 0 && fadeWidth > 0 && totalLightLength > 1) {
-              if (pos < fadeWidth) intensity = powf((float)pos / fadeWidth, fadeExp);
-              else if (pos >= (totalLightLength - fadeWidth)) intensity = powf((float)(totalLightLength - 1 - pos) / fadeWidth, fadeExp);
-          }
-          if (intensity > 0.01f) {
-              CRGB drawColor = targetSettings[0].color;
-              drawColor.nscale8_video(scale8(target.currentBrightness * 255, (uint8_t)(intensity * 255)));
-              leds[i] += drawColor;
-          }
+        int pos = (direction > 0) ? (i - leftEdge) : (rightEdge - i);
+        float intensity = 1.0f;
+        if (gradientSoftness > 0 && fadeWidth > 0 && totalLightLength > 1) {
+          if (pos < fadeWidth) intensity = powf((float)pos / fadeWidth, fadeExp);
+          else if (pos >= (totalLightLength - fadeWidth)) intensity = powf((float)(totalLightLength - 1 - pos) / fadeWidth, fadeExp);
+        }
+        if (intensity > 0.01f) {
+          CRGB drawColor = targetSettings[0].color;
+          drawColor.nscale8_video(scale8(target.currentBrightness * 255, (uint8_t)(intensity * 255)));
+          leds[i] += drawColor;
+        }
       }
     }
     FastLED.show();
     long delayMicros = (ledUpdateInterval * 1000) - (micros() - currentMicros);
-    vTaskDelay(pdMS_TO_TICKS(max(0L, delayMicros/1000)));
+    vTaskDelay(pdMS_TO_TICKS(max(0L, delayMicros / 1000)));
   }
 }
 
 // --- WEB & NETWORK FUNCTIONS ---
 void setupWiFi() {
-  WiFi.mode(WIFI_AP);
-  esp_wifi_set_max_tx_power(8); 
-  IPAddress local_IP(192, 168, 4, 1);
-  WiFi.softAPConfig(local_IP, local_IP, IPAddress(255, 255, 255, 0));
-  uint8_t mac[6];
-  esp_read_mac(mac, ESP_MAC_WIFI_SOFTAP);
-  char deviceName[25];
-  sprintf(deviceName, "LightTrack-VISION-%02X%02X%02X", mac[3], mac[4], mac[5]);
-  WiFi.softAP(deviceName, "12345678");
+  // Try connecting to your existing WiFi
+  WiFi.mode(WIFI_STA);
+  WiFi.begin("Wifi-SSID", "Wifi_Pass");
+  Serial.print("Connecting to WiFi");
+
+  unsigned long startAttemptTime = millis();
+  const unsigned long timeout = 15000;  // 15 seconds timeout
+
+  while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < timeout) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\n✅ Connected to WiFi!");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    // Fallback to Access Point mode if connection failed
+    Serial.println("\n⚠️ Failed to connect. Starting AP mode...");
+    WiFi.mode(WIFI_AP);
+    esp_wifi_set_max_tx_power(8);
+
+    IPAddress local_IP(192, 168, 4, 1);
+    WiFi.softAPConfig(local_IP, local_IP, IPAddress(255, 255, 255, 0));
+
+    uint8_t mac[6];
+    esp_read_mac(mac, ESP_MAC_WIFI_SOFTAP);
+    char deviceName[25];
+    sprintf(deviceName, "LightTrack-VISION-%02X%02X%02X", mac[3], mac[4], mac[5]);
+    WiFi.softAP(deviceName, "12345678");
+
+    Serial.print("AP Mode Started. IP: ");
+    Serial.println(WiFi.softAPIP());
+  }
+
+  // --- Web server routes (unchanged) ---
   server.on("/", HTTP_GET, handleRoot);
   server.on("/setMovingIntensity", HTTP_GET, handleSetMovingIntensity);
   server.on("/setStationaryIntensity", HTTP_GET, handleSetStationaryIntensity);
@@ -497,28 +595,97 @@ void setupWiFi() {
   server.on("/radarview", HTTP_GET, handleRadarView);
   server.on("/setTarget", HTTP_GET, handleSetTargetSettings);
   server.onNotFound(handleNotFound);
+  // --- Start servers (unchanged) ---
   server.begin();
   webSocket.begin();
   webSocket.onEvent(webSocketEvent);
 }
-void checkWiFiTimeout() {if(wifiActive&&wifiTimeoutMinutes>0&&millis()-wifiStartTime>(unsigned long)wifiTimeoutMinutes*60*1000){WiFi.mode(WIFI_OFF);wifiActive=false;}}
-void webServerTask(void*p){unsigned long lastRadarBroadcast=0;for(;;){if(wifiActive){server.handleClient();webSocket.loop();ArduinoOTA.handle();if(webSocket.connectedClients()>0&&millis()-lastRadarBroadcast>100){broadcastRadarData();lastRadarBroadcast=millis();}}vTaskDelay(pdMS_TO_TICKS(2));}}
-void setupOTA(){ArduinoOTA.onStart([](){});ArduinoOTA.onEnd([](){});ArduinoOTA.onProgress([](unsigned int p,unsigned int t){});ArduinoOTA.onError([](ota_error_t e){});uint8_t m[6];esp_read_mac(m,ESP_MAC_WIFI_SOFTAP);char d[25];sprintf(d,"LightTrack-VISION-%02X%02X%02X",m[3],m[4],m[5]);ArduinoOTA.setHostname(d);ArduinoOTA.begin();}
-void handleSetTime(){if(server.hasArg("tz")){clientTimezoneOffsetMinutes=server.arg("tz").toInt();isTimeOffsetSet=true;}if(server.hasArg("epoch")){time_t e=strtoul(server.arg("epoch").c_str(),NULL,10);struct timeval tv={.tv_sec=e,.tv_usec=0};settimeofday(&tv,NULL);}updateTime();server.send(200,"text/plain","OK");}
-void updateTime(){unsigned long c=millis();if(c-lastTimeCheck<1000)return;lastTimeCheck=c;time_t n=time(nullptr);if(n<1609459200UL||!isTimeOffsetSet)return;time_t l=n+(clientTimezoneOffsetMinutes*60);struct tm t;gmtime_r(&l,&t);int cur=t.tm_hour*60+t.tm_min;int s=startHour*60+startMinute;int e=endHour*60+endMinute;bool on=(s<=e)?(cur>=s&&cur<e):(cur>=s||cur<e);if(!smarthomeOverride&&(lightOn!=on)){lightOn=on;}}
-void handleGetCurrentTime(){char t[20]="N/A";time_t n=time(nullptr);if(n>1609459200UL&&isTimeOffsetSet){time_t l=n+(clientTimezoneOffsetMinutes*60);strftime(t,sizeof(t),"%H:%M:%S",gmtime(&l));}else if(n>1609459200UL){strcpy(t,"No TZ");}else{strcpy(t,"Syncing...");}server.send(200,"application/json",String("{\"time\":\"")+t+"\"}");}
+void checkWiFiTimeout() {
+  if (wifiActive && wifiTimeoutMinutes > 0 && millis() - wifiStartTime > (unsigned long)wifiTimeoutMinutes * 60 * 1000) {
+    WiFi.mode(WIFI_OFF);
+    wifiActive = false;
+  }
+}
+void webServerTask(void* p) {
+  unsigned long lastRadarBroadcast = 0;
+  for (;;) {
+    if (wifiActive) {
+      server.handleClient();
+      webSocket.loop();
+      ArduinoOTA.handle();
+      if (webSocket.connectedClients() > 0 && millis() - lastRadarBroadcast > 100) {
+        broadcastRadarData();
+        lastRadarBroadcast = millis();
+      }
+    }
+    vTaskDelay(pdMS_TO_TICKS(2));
+  }
+}
+void setupOTA() {
+  ArduinoOTA.onStart([]() {});
+  ArduinoOTA.onEnd([]() {});
+  ArduinoOTA.onProgress([](unsigned int p, unsigned int t) {});
+  ArduinoOTA.onError([](ota_error_t e) {});
+  uint8_t m[6];
+  esp_read_mac(m, ESP_MAC_WIFI_SOFTAP);
+  char d[25];
+  sprintf(d, "LightTrack-VISION-%02X%02X%02X", m[3], m[4], m[5]);
+  ArduinoOTA.setHostname(d);
+  ArduinoOTA.begin();
+}
+void handleSetTime() {
+  if (server.hasArg("tz")) {
+    clientTimezoneOffsetMinutes = server.arg("tz").toInt();
+    isTimeOffsetSet = true;
+  }
+  if (server.hasArg("epoch")) {
+    time_t e = strtoul(server.arg("epoch").c_str(), NULL, 10);
+    struct timeval tv = { .tv_sec = e, .tv_usec = 0 };
+    settimeofday(&tv, NULL);
+  }
+  updateTime();
+  server.send(200, "text/plain", "OK");
+}
+void updateTime() {
+  unsigned long c = millis();
+  if (c - lastTimeCheck < 1000) return;
+  lastTimeCheck = c;
+  time_t n = time(nullptr);
+  if (n < 1609459200UL || !isTimeOffsetSet) return;
+  time_t l = n + (clientTimezoneOffsetMinutes * 60);
+  struct tm t;
+  gmtime_r(&l, &t);
+  int cur = t.tm_hour * 60 + t.tm_min;
+  int s = startHour * 60 + startMinute;
+  int e = endHour * 60 + endMinute;
+  bool on = (s <= e) ? (cur >= s && cur < e) : (cur >= s || cur < e);
+  if (!smarthomeOverride && (lightOn != on)) { lightOn = on; }
+}
+void handleGetCurrentTime() {
+  char t[20] = "N/A";
+  time_t n = time(nullptr);
+  if (n > 1609459200UL && isTimeOffsetSet) {
+    time_t l = n + (clientTimezoneOffsetMinutes * 60);
+    strftime(t, sizeof(t), "%H:%M:%S", gmtime(&l));
+  } else if (n > 1609459200UL) {
+    strcpy(t, "No TZ");
+  } else {
+    strcpy(t, "Syncing...");
+  }
+  server.send(200, "application/json", String("{\"time\":\"") + t + "\"}");
+}
 
-void handleRoot(){
-  char sS[6],sE[6];
-  sprintf(sS,"%02d:%02d",startHour,startMinute);
-  sprintf(sE,"%02d:%02d",endHour,endMinute);
-  String h="";
+void handleRoot() {
+  char sS[6], sE[6];
+  sprintf(sS, "%02d:%02d", startHour, startMinute);
+  sprintf(sE, "%02d:%02d", endHour, endMinute);
+  String h = "";
   h.reserve(7000);
   char c[8];
-  sprintf(c,"#%02x%02x%02x",targetSettings[0].color.r,targetSettings[0].color.g,targetSettings[0].color.b);
-  int dMI=round((movingIntensity/MAX_BRIGHTNESS_SCALER)*100.0f);
-  float dSI=(stationaryIntensity/MAX_BRIGHTNESS_SCALER)*100.0f;
-  
+  sprintf(c, "#%02x%02x%02x", targetSettings[0].color.r, targetSettings[0].color.g, targetSettings[0].color.b);
+  int dMI = round((movingIntensity / MAX_BRIGHTNESS_SCALER) * 100.0f);
+  float dSI = (stationaryIntensity / MAX_BRIGHTNESS_SCALER) * 100.0f;
+
   h += R"rawliteral(
 <!DOCTYPE html><html><head><title>LightTrack VISION</title><meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no'><meta charset='UTF-8'><style>body{background-color:#282c34;color:#abb2bf;font-family:sans-serif;margin:0;padding:15px}.container{max-width:700px;margin:auto;background-color:#3a3f4b;padding:20px;border-radius:8px;box-shadow:0 4px 8px #00000033}h1,h2{color:#61afef;text-align:center;border-bottom:1px solid #4b5263;padding-bottom:10px;margin-top:0}h2{margin-top:25px;border-bottom:none}label{display:block;margin-top:15px;margin-bottom:5px;color:#98c379;font-weight:bold}input[type=color]{width:40px;height:40px;border:none;border-radius:5px;padding:0;cursor:pointer;background-color:transparent;vertical-align:middle;margin-left:10px}input[type=time]{font-size:1em;padding:5px;border-radius:4px;border:1px solid #4b5263;background-color:#282c34;color:#abb2bf;margin:0 5px}input[type=radio]{margin:0 5px 0 10px;vertical-align:middle;transform:scale(1.2)}button,a.button-link{display:inline-block;text-decoration:none;font-size:1em;margin:10px 5px;padding:10px 15px;border:none;border-radius:5px;background-color:#61afef;color:#282c34!important;cursor:pointer;transition:background-color .2s;text-align:center}button:hover,a.button-link:hover{background-color:#5295cc}.button-off{background-color:#e06c75}.button-off:hover{background-color:#be5046}.button-nav{background-color:#c678dd}.button-nav:hover{background-color:#a968bd}hr{border:none;height:1px;background:#4b5263;margin:25px 0}.value-display{color:#e5c07b;font-weight:normal;display:inline}.time-container{display:flex;justify-content:center;align-items:center;gap:15px;margin-top:5px;flex-wrap:wrap}.current-time{font-size:.9em;color:#5c6370;text-align:center;margin-top:15px}.radio-group label{display:inline;font-weight:normal;color:#abb2bf}.footer{font-size:.8em;color:#5c6370;text-align:center;margin-top:20px}input[type=range]{width:100%;-webkit-appearance:none;background:#4b5263;height:10px;border-radius:5px;margin-bottom:5px;pointer-events:none}input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;background:#61afef;border-radius:50%;cursor:pointer;border:3px solid #282c34;pointer-events:auto}details{border:1px solid #4b5263;border-radius:5px;padding:10px;margin-top:10px;background-color:#2c313a}summary{font-weight:bold;color:#c678dd;cursor:pointer;padding:5px;list-style-position:inside}.color-label{display:flex;align-items:center;justify-content:space-between}</style><script>const STRIP_LENGTH=)rawliteral";
   h += String(STRIP_LENGTH);
@@ -537,15 +704,15 @@ void handleRoot(){
   h += R"rawliteral(' oninput='u("v_ml",this.value)' onchange='s("/setMovingLength?value="+this.value)'><label>Additional Length (Directional): <span class='value-display' id='v_al'>)rawliteral";
   h += String(additionalLEDs);
   h += R"rawliteral(</span> LEDs</label><input type='range' min='0' max=')rawliteral";
-  h += String(currentNumLeds/2);
+  h += String(currentNumLeds / 2);
   h += R"rawliteral(' value=')rawliteral";
   h += String(additionalLEDs);
   h += R"rawliteral(' oninput='u("v_al",this.value)' onchange='s("/setAdditionalLEDs?value="+this.value)'><label>Center Shift: <span class='value-display' id='v_cs'>)rawliteral";
   h += String(centerShift);
   h += R"rawliteral(</span> LEDs</label><input type='range' min='-)rawliteral";
-  h += String(currentNumLeds/2);
+  h += String(currentNumLeds / 2);
   h += R"rawliteral(' max=')rawliteral";
-  h += String(currentNumLeds/2);
+  h += String(currentNumLeds / 2);
   h += R"rawliteral(' value=')rawliteral";
   h += String(centerShift);
   h += R"rawliteral(' oninput='u("v_cs",this.value)' onchange='s("/setCenterShift?value="+this.value)'><label>Gradient Softness: <span class='value-display' id='v_gs'>)rawliteral";
@@ -561,9 +728,9 @@ void handleRoot(){
   h += "'>";
   h += (backgroundModeActive ? "Turn Off Background" : "Turn On Background");
   h += R"rawliteral(</button><label style='margin-top:10px'>Brightness (Background/Still): <span class='value-display' id='v_si'>)rawliteral";
-  h += String(dSI,1);
+  h += String(dSI, 1);
   h += R"rawliteral(</span>%</label><input type='range' min='0' max='10' step='0.1' value=')rawliteral";
-  h += String(dSI,1);
+  h += String(dSI, 1);
   h += R"rawliteral(' oninput='u("v_si",parseFloat(this.value).toFixed(1))' onchange='s("/setStationaryIntensity?value="+this.value)'><hr><h2>Schedule</h2><div class='time-container'><input type='time' id='s_start' value=')rawliteral";
   h += String(sS);
   h += R"rawliteral(' onchange="s('/setSchedule?startHour='+this.value.split(':')[0]+'&startMinute='+this.value.split(':')[1]+'&endHour='+document.getElementById('s_end').value.split(':')[0]+'&endMinute='+document.getElementById('s_end').value.split(':')[1])"><span>-</span><input type='time' id='s_end' value=')rawliteral";
@@ -571,31 +738,188 @@ void handleRoot(){
   h += R"rawliteral(' onchange="s('/setSchedule?startHour='+document.getElementById('s_start').value.split(':')[0]+'&startMinute='+document.getElementById('s_start').value.split(':')[1]+'&endHour='+this.value.split(':')[0]+'&endMinute='+this.value.split(':')[1])"></div><div class='current-time'>Local Time: <span id='currentTimeDisplay'>Syncing...</span></div><hr><details><summary>Strip Settings</summary><label>LED Density: <span id="led_count_span" class='value-display'>( )rawliteral";
   h += String(currentNumLeds);
   h += R"rawliteral( LEDs)</span></label><div class='radio-group'><input type='radio' id='density30' name='ledDensity' value='30' )rawliteral";
-  h += (currentLedDensity==30 ? "checked" : "");
+  h += (currentLedDensity == 30 ? "checked" : "");
   h += R"rawliteral( onchange="updateDensity(30)"><label for='density30'>30 LEDs/m</label><input type='radio' id='density60' name='ledDensity' value='60' )rawliteral";
-  h += (currentLedDensity==60 ? "checked" : "");
+  h += (currentLedDensity == 60 ? "checked" : "");
   h += R"rawliteral( onchange="updateDensity(60)"><label for='density60'>60 LEDs/m</label></div></details><hr><div class='footer'>LightTrack VISION</div></div></body></html>)rawliteral";
-  
+
   server.send(200, "text/html; charset=utf-8", h);
 }
 
-void handleSetTargetSettings(){if(server.hasArg("id")){int id=server.arg("id").toInt();if(id==0){if(server.hasArg("r")){targetSettings[0].color=CRGB(server.arg("r").toInt(),server.arg("g").toInt(),server.arg("b").toInt());}saveSettings();server.send(200,"text/plain","OK");return;}}server.send(400,"text/plain","Bad Request");}
-void handleSetMovingIntensity(){if(server.hasArg("value")){float v=server.arg("value").toFloat()/100.0f;movingIntensity=constrain(v,0.0f,1.0f)*MAX_BRIGHTNESS_SCALER;saveSettings();server.send(200,"text/plain","OK");}}
-void handleSetStationaryIntensity(){if(server.hasArg("value")){float v=server.arg("value").toFloat()/100.0f;stationaryIntensity=constrain(v,0.0f,0.1f)*MAX_BRIGHTNESS_SCALER;saveSettings();server.send(200,"text/plain","OK");}}
-void handleSetMovingLength(){if(server.hasArg("value")){movingLength=constrain(server.arg("value").toInt(),1,currentNumLeds);saveSettings();server.send(200,"text/plain","OK");}}
-void handleSetAdditionalLEDs(){if(server.hasArg("value")){additionalLEDs=constrain(server.arg("value").toInt(),0,currentNumLeds/2);saveSettings();server.send(200,"text/plain","OK");}}
-void handleSetCenterShift(){if(server.hasArg("value")){centerShift=constrain(server.arg("value").toInt(),-currentNumLeds/2,currentNumLeds/2);saveSettings();server.send(200,"text/plain","OK");}}
-void handleSetLedDensity(){if(server.hasArg("value")){int n=server.arg("value").toInt();if((n==30||n==60)&&n!=currentLedDensity){currentLedDensity=n;currentNumLeds=constrain(n*STRIP_LENGTH,1,MAX_NUM_LEDS);movingLength=constrain(movingLength,1,currentNumLeds);additionalLEDs=constrain(additionalLEDs,0,currentNumLeds/2);centerShift=constrain(centerShift,-currentNumLeds/2,currentNumLeds/2);saveSettings();fill_solid(leds,MAX_NUM_LEDS,CRGB::Black);FastLED.show();}server.send(200,"text/plain","OK");}}
-void handleSetGradientSoftness(){if(server.hasArg("value")){gradientSoftness=constrain(server.arg("value").toInt(),0,10);saveSettings();server.send(200,"text/plain","OK");}}
-void handleSetLedOffDelay(){if(server.hasArg("value")){ledOffDelay=constrain(server.arg("value").toInt(),0,600);saveSettings();server.send(200,"text/plain","OK");}}
-void handleSetSchedule(){if(server.hasArg("startHour")){startHour=constrain(server.arg("startHour").toInt(),0,23);startMinute=constrain(server.arg("startMinute").toInt(),0,59);endHour=constrain(server.arg("endHour").toInt(),0,23);endMinute=constrain(server.arg("endMinute").toInt(),0,59);saveSettings();updateTime();server.send(200,"text/plain","OK");}}
-void handleToggleBackgroundMode(){backgroundModeActive=!backgroundModeActive;saveSettings();server.send(200,"text/plain","OK");}
-void handleSmartHomeOn(){lightOn=true;smarthomeOverride=true;server.send(200,"text/plain","ON");}
-void handleSmartHomeOff(){lightOn=false;smarthomeOverride=true;server.send(200,"text/plain","OFF");}
-void handleSmartHomeClear(){smarthomeOverride=false;updateTime();server.send(200,"text/plain","CLEARED");}
-void handleNotFound(){server.send(404,"text/plain","404: Not found");}
-void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {if(type==WStype_CONNECTED){IPAddress ip=webSocket.remoteIP(num);JsonDocument doc;JsonArray zonesArray=doc["inactiveZones"].to<JsonArray>();for(int i=0;i<MAX_INACTIVE_ZONES;++i){JsonObject zoneObj=zonesArray.add<JsonObject>();zoneObj["id"]=i;zoneObj["enabled"]=inactiveZones[i].enabled;JsonArray cornersArray=zoneObj["corners"].to<JsonArray>();for(int j=0;j<4;++j){JsonObject cornerObj=cornersArray.add<JsonObject>();cornerObj["x"]=inactiveZones[i].corners[j].x;cornerObj["y"]=inactiveZones[i].corners[j].y;}}String jsonOutput;serializeJson(doc,jsonOutput);webSocket.sendTXT(num,jsonOutput);}else if(type==WStype_TEXT){JsonDocument doc;if(deserializeJson(doc,payload,length)==DeserializationError::Ok){bool shouldSave=!doc["saveInactiveZones"].isNull();if(shouldSave||!doc["setInactiveZones"].isNull()){JsonArray zonesArray=doc[shouldSave?"saveInactiveZones":"setInactiveZones"];for(JsonObject zoneData:zonesArray){int id=zoneData["id"]|-1;if(id>=0&&id<MAX_INACTIVE_ZONES){inactiveZones[id].enabled=zoneData["enabled"];JsonArray cornersArray=zoneData["corners"];if(cornersArray.size()==4){for(int j=0;j<4;++j){inactiveZones[id].corners[j].x=cornersArray[j]["x"];inactiveZones[id].corners[j].y=cornersArray[j]["y"];}}}}if(shouldSave){saveSettings();webSocket.sendTXT(num,"{\"zonesSaved\":true}");}}}}}
-void broadcastRadarData(){if(webSocket.connectedClients()==0)return;JsonDocument doc;JsonArray targetsArray=doc["targets"].to<JsonArray>();if(targets[0].present&&targetSettings[0].enabled){JsonObject targetObj=targetsArray.add<JsonObject>();targetObj["id"]=0;targetObj["x"]=targets[0].x;targetObj["y"]=targets[0].y;targetObj["s"]=targets[0].speed;}String jsonOutput;serializeJson(doc,jsonOutput);webSocket.broadcastTXT(jsonOutput);}
+void handleSetTargetSettings() {
+  if (server.hasArg("id")) {
+    int id = server.arg("id").toInt();
+    if (id == 0) {
+      if (server.hasArg("r")) { targetSettings[0].color = CRGB(server.arg("r").toInt(), server.arg("g").toInt(), server.arg("b").toInt()); }
+      saveSettings();
+      server.send(200, "text/plain", "OK");
+      return;
+    }
+  }
+  server.send(400, "text/plain", "Bad Request");
+}
+void handleSetMovingIntensity() {
+  if (server.hasArg("value")) {
+    float v = server.arg("value").toFloat() / 100.0f;
+    movingIntensity = constrain(v, 0.0f, 1.0f) * MAX_BRIGHTNESS_SCALER;
+    saveSettings();
+    server.send(200, "text/plain", "OK");
+  }
+}
+void handleSetStationaryIntensity() {
+  if (server.hasArg("value")) {
+    float v = server.arg("value").toFloat() / 100.0f;
+    stationaryIntensity = constrain(v, 0.0f, 0.1f) * MAX_BRIGHTNESS_SCALER;
+    saveSettings();
+    server.send(200, "text/plain", "OK");
+  }
+}
+void handleSetMovingLength() {
+  if (server.hasArg("value")) {
+    movingLength = constrain(server.arg("value").toInt(), 1, currentNumLeds);
+    saveSettings();
+    server.send(200, "text/plain", "OK");
+  }
+}
+void handleSetAdditionalLEDs() {
+  if (server.hasArg("value")) {
+    additionalLEDs = constrain(server.arg("value").toInt(), 0, currentNumLeds / 2);
+    saveSettings();
+    server.send(200, "text/plain", "OK");
+  }
+}
+void handleSetCenterShift() {
+  if (server.hasArg("value")) {
+    centerShift = constrain(server.arg("value").toInt(), -currentNumLeds / 2, currentNumLeds / 2);
+    saveSettings();
+    server.send(200, "text/plain", "OK");
+  }
+}
+void handleSetLedDensity() {
+  if (server.hasArg("value")) {
+    int n = server.arg("value").toInt();
+    if ((n == 30 || n == 60) && n != currentLedDensity) {
+      currentLedDensity = n;
+      currentNumLeds = constrain(n * STRIP_LENGTH, 1, MAX_NUM_LEDS);
+      movingLength = constrain(movingLength, 1, currentNumLeds);
+      additionalLEDs = constrain(additionalLEDs, 0, currentNumLeds / 2);
+      centerShift = constrain(centerShift, -currentNumLeds / 2, currentNumLeds / 2);
+      saveSettings();
+      fill_solid(leds, MAX_NUM_LEDS, CRGB::Black);
+      FastLED.show();
+    }
+    server.send(200, "text/plain", "OK");
+  }
+}
+void handleSetGradientSoftness() {
+  if (server.hasArg("value")) {
+    gradientSoftness = constrain(server.arg("value").toInt(), 0, 10);
+    saveSettings();
+    server.send(200, "text/plain", "OK");
+  }
+}
+void handleSetLedOffDelay() {
+  if (server.hasArg("value")) {
+    ledOffDelay = constrain(server.arg("value").toInt(), 0, 600);
+    saveSettings();
+    server.send(200, "text/plain", "OK");
+  }
+}
+void handleSetSchedule() {
+  if (server.hasArg("startHour")) {
+    startHour = constrain(server.arg("startHour").toInt(), 0, 23);
+    startMinute = constrain(server.arg("startMinute").toInt(), 0, 59);
+    endHour = constrain(server.arg("endHour").toInt(), 0, 23);
+    endMinute = constrain(server.arg("endMinute").toInt(), 0, 59);
+    saveSettings();
+    updateTime();
+    server.send(200, "text/plain", "OK");
+  }
+}
+void handleToggleBackgroundMode() {
+  backgroundModeActive = !backgroundModeActive;
+  saveSettings();
+  server.send(200, "text/plain", "OK");
+}
+void handleSmartHomeOn() {
+  lightOn = true;
+  smarthomeOverride = true;
+  server.send(200, "text/plain", "ON");
+}
+void handleSmartHomeOff() {
+  lightOn = false;
+  smarthomeOverride = true;
+  server.send(200, "text/plain", "OFF");
+}
+void handleSmartHomeClear() {
+  smarthomeOverride = false;
+  updateTime();
+  server.send(200, "text/plain", "CLEARED");
+}
+void handleNotFound() {
+  server.send(404, "text/plain", "404: Not found");
+}
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
+  if (type == WStype_CONNECTED) {
+    IPAddress ip = webSocket.remoteIP(num);
+    JsonDocument doc;
+    JsonArray zonesArray = doc["inactiveZones"].to<JsonArray>();
+    for (int i = 0; i < MAX_INACTIVE_ZONES; ++i) {
+      JsonObject zoneObj = zonesArray.add<JsonObject>();
+      zoneObj["id"] = i;
+      zoneObj["enabled"] = inactiveZones[i].enabled;
+      JsonArray cornersArray = zoneObj["corners"].to<JsonArray>();
+      for (int j = 0; j < 4; ++j) {
+        JsonObject cornerObj = cornersArray.add<JsonObject>();
+        cornerObj["x"] = inactiveZones[i].corners[j].x;
+        cornerObj["y"] = inactiveZones[i].corners[j].y;
+      }
+    }
+    String jsonOutput;
+    serializeJson(doc, jsonOutput);
+    webSocket.sendTXT(num, jsonOutput);
+  } else if (type == WStype_TEXT) {
+    JsonDocument doc;
+    if (deserializeJson(doc, payload, length) == DeserializationError::Ok) {
+      bool shouldSave = !doc["saveInactiveZones"].isNull();
+      if (shouldSave || !doc["setInactiveZones"].isNull()) {
+        JsonArray zonesArray = doc[shouldSave ? "saveInactiveZones" : "setInactiveZones"];
+        for (JsonObject zoneData : zonesArray) {
+          int id = zoneData["id"] | -1;
+          if (id >= 0 && id < MAX_INACTIVE_ZONES) {
+            inactiveZones[id].enabled = zoneData["enabled"];
+            JsonArray cornersArray = zoneData["corners"];
+            if (cornersArray.size() == 4) {
+              for (int j = 0; j < 4; ++j) {
+                inactiveZones[id].corners[j].x = cornersArray[j]["x"];
+                inactiveZones[id].corners[j].y = cornersArray[j]["y"];
+              }
+            }
+          }
+        }
+        if (shouldSave) {
+          saveSettings();
+          webSocket.sendTXT(num, "{\"zonesSaved\":true}");
+        }
+      }
+    }
+  }
+}
+void broadcastRadarData() {
+  if (webSocket.connectedClients() == 0) return;
+  JsonDocument doc;
+  JsonArray targetsArray = doc["targets"].to<JsonArray>();
+  if (targets[0].present && targetSettings[0].enabled) {
+    JsonObject targetObj = targetsArray.add<JsonObject>();
+    targetObj["id"] = 0;
+    targetObj["x"] = targets[0].x;
+    targetObj["y"] = targets[0].y;
+    targetObj["s"] = targets[0].speed;
+  }
+  String jsonOutput;
+  serializeJson(doc, jsonOutput);
+  webSocket.broadcastTXT(jsonOutput);
+}
 
 void handleRadarView() {
   String html = R"rawliteral(
