@@ -14,6 +14,10 @@
 #include <math.h>
 #include <utility> // For std::swap
 
+// --- WiFi Credentials ---
+const char* WIFI_SSID = "Your_SSID";
+const char* WIFI_PASS = "Your_PASSWORD";
+
 // --- PIN CONFIGURATION ---
 const int RX1_PIN = 18;
 const int TX1_PIN = 17;
@@ -541,7 +545,7 @@ void ledTask(void* parameter) {
 void setupWiFi() {
   // Try connecting to your existing WiFi
   WiFi.mode(WIFI_STA);
-  WiFi.begin("Wifi-SSID", "Wifi_Pass");
+  WiFi.begin(WIFI_SSID, WIFI_PASS)
   Serial.print("Connecting to WiFi");
 
   unsigned long startAttemptTime = millis();
@@ -600,10 +604,8 @@ void setupWiFi() {
   webSocket.begin();
   webSocket.onEvent(webSocketEvent);
 }
+// doesn't disable wifi after set time.
 void checkWiFiTimeout() {
-  if (wifiActive && wifiTimeoutMinutes > 0 && millis() - wifiStartTime > (unsigned long)wifiTimeoutMinutes * 60 * 1000) {
-    WiFi.mode(WIFI_OFF);
-    wifiActive = false;
   }
 }
 void webServerTask(void* p) {
