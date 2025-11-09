@@ -27,7 +27,7 @@ const int LED_PIN = 2;
 #define MAX_LED_DENSITY 20
 #define STRIP_LENGTH 4
 #define MAX_NUM_LEDS (MAX_LED_DENSITY * STRIP_LENGTH)
-#define LED_TYPE WS2812B
+#define LED_TYPE WS2811
 #define COLOR_ORDER GRB
 CRGB leds[MAX_NUM_LEDS];
 
@@ -221,11 +221,10 @@ void setup() {
   Serial.println("--------------------------------------");
   Serial.println("Setup complete. System is running.");
   Serial.print("Web UI: http://");
-  Serial.println(WiFi.softAPIP());
+  Serial.println(WiFi.localIP());
   Serial.print("Radar View: http://");
-  Serial.print(WiFi.softAPIP());
+  Serial.println(WiFi.localIP());
   Serial.println("/radarview");
-  Serial.printf("Wi-Fi will turn off automatically in %d minutes.\n", wifiTimeoutMinutes);
   Serial.println("--------------------------------------");
 }
 
@@ -607,7 +606,7 @@ void setupWiFi() {
 // doesn't disable wifi after set time.
 void checkWiFiTimeout() {
   }
-}
+
 void webServerTask(void* p) {
   unsigned long lastRadarBroadcast = 0;
   for (;;) {
